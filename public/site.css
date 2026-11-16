@@ -61,3 +61,5 @@
 .ap-slide img{height:140px}
 .ap-slide.ap-img{min-height:0}
 @media(max-width:640px){.ap-slide{min-height:220px}.ap-slide strong{font-size:20px}}
+/* image banners on phones: small see-through arrows so they don't cover the banner text */
+@media(max-width:640px){.ap-arrow{width:24px;height:24px;font-size:14px;background:rgba(245,158,11,.6)}.ap-arrow.prev{left:4px}.ap-arrow.next{right:4px}}

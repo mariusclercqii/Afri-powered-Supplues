@@ -1,4 +1,4 @@
 [
-  {"tag":"Special","title":"Your special offer goes here","sub":"Edit data/promos.json to change this banner. Add as many slides as you like.","price":"","image":"","link":"/shop","cta":"Shop now","start":"","end":""},
-  {"tag":"Combo deal","title":"Your combo deal goes here","sub":"For example: inverter + battery together.","price":"","image":"","link":"https://wa.me/27718111466?text=Hi%20Afri-Powered%2C%20I%27m%20interested%20in%20your%20combo%20deal","cta":"Order on WhatsApp","start":"","end":""}
+  {"image":"assets/banners/toplink-3-6kva-combo.jpg","alt":"Toplink 3.6kVA solar combo November special: 3.6kVA inverter, 24V battery and 4 x 460W panels for R14,910 with a free 500W floodlight","link":"https://wa.me/27718111466?text=Hi%20Afri-Powered%2C%20I%27m%20interested%20in%20the%20Toplink%203.6kVA%20solar%20combo%20(R14%2C910)","start":"","end":""},
+  {"image":"assets/banners/toplink-6-5kva-combo.jpg","alt":"Toplink 6.5kVA solar combo November special: 6.5kVA inverter, 5.12kWh battery and 6 x 460W panels for R22,740","link":"https://wa.me/27718111466?text=Hi%20Afri-Powered%2C%20I%27m%20interested%20in%20the%20Toplink%206.5kVA%20solar%20combo%20(R22%2C740)","start":"","end":""}
 ]
