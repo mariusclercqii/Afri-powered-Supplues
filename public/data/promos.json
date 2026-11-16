@@ -1,0 +1,4 @@
+[
+  {"title":"Sample special: 5kW inverter deal","text":"Replace this slide in data/promos.json with your own advert.","link":"shop.html?sale=1","cta":"See specials","image":"","start":"","end":""},
+  {"title":"Sample combo: inverter + battery","text":"Add combo adverts with an image, a link and optional dates.","link":"shop.html","cta":"Shop now","image":""}
+]

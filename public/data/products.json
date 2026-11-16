@@ -1,0 +1,14 @@
+[
+{"name":"SunMagic 3.5KW 24V 3000W PWM Hybrid Pure Sine Wave Inverter","category":"Inverters","brand":"SunMagic","kw":3.5,"voltage":24,"price":4850,"image":"2024/02/3.5kw-24V-Sunmagic-Pure-Sine-wave-Inverter.png"},
+{"name":"Must 3KW 24V 80A MPPT Hybrid Solar Inverter","category":"Inverters","brand":"Must","kw":3,"voltage":24,"price":5399,"image":"2024/02/3kw-vpm-front-600x600-1.jpg"},
+{"name":"Solarix Kingstar 3.5KW 1500W 24V 60A Pure Sine Wave Inverter","category":"Inverters","brand":"Solarix","kw":3.5,"voltage":24,"price":5500,"image":"2024/02/3.5kw-1500W-60A-24V-Pure-sine-wave-Kingstar-Inverter.png"},
+{"name":"Must 5.2KW 5200W MPPT 48V 100A Hybrid Inverter","category":"Inverters","brand":"Must","kw":5.2,"voltage":48,"price":7299,"image":"2024/02/48V-5.2KVA-5200W-100A-MPPT-SOLAR-INVERTER-MUST.png"},
+{"name":"Growtech 5.5KW 48V MPPT Hybrid Inverter 100A 120-450VDC","category":"Inverters","brand":"Growtech","kw":5.5,"voltage":48,"price":8300,"image":"2024/02/GROWTECH-5.5KW-48V-MPPT-HYBRID-SOLAR-INVERTER-100A-120V-450VDC.png"},
+{"name":"Growatt 5KW 48V Hybrid Inverter","category":"Inverters","brand":"Growatt","kw":5,"voltage":48,"price":8999,"was":9999,"image":"2024/02/Growatt-SPF-3500-ES-SPF-5000-ES-side.jpg"},
+{"name":"Lux Power 5KW 48V MPPT Hybrid Inverter","category":"Inverters","brand":"Lux Power","kw":5,"voltage":48,"price":8999,"was":9999,"image":"2024/02/lux_dc156a65-6058-44b3-871d-2f8895b5afcc-300x300.webp"},
+{"name":"Deye 5KW 48V Hybrid PV Inverter + WIFI Dongle","category":"Inverters","brand":"Deye","kw":5,"voltage":48,"price":18299,"image":"2024/02/sun-8-10-12k-%E6%AD%A3%E9%9D%A2-2-1.png"},
+{"name":"Sunsynk 5KW 48V PV Hybrid Inverter","category":"Inverters","brand":"Sunsynk","kw":5,"voltage":48,"price":18900,"image":"2024/02/sunsynk-5kw.jpg"},
+{"name":"Sunsynk 8KW 48V Hybrid Inverter + WIFI dongle","category":"Inverters","brand":"Sunsynk","kw":8,"voltage":48,"price":25900,"image":"2024/02/sunsynk-5kw.jpg"},
+{"name":"Deye 12kW SP Hybrid Inverter + WIFI dongle","category":"Inverters","brand":"Deye","kw":12,"price":34900,"image":"2024/02/5kw-Deye.png"},
+{"name":"Volta 5.12KWH 48V 100AH Lithium Battery (Wall Mount)","category":"Batteries","brand":"Volta","voltage":48,"price":17800,"image":"2024/03/Volta-5.12KWH-48V-100AH-Lthium-Battery.jpeg"}
+]
