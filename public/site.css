@@ -62,4 +62,7 @@
 .ap-slide.ap-img{min-height:0}
 @media(max-width:640px){.ap-slide{min-height:220px}.ap-slide strong{font-size:20px}}
 /* image banners on phones: small see-through arrows so they don't cover the banner text */
-@media(max-width:640px){.ap-arrow{width:24px;height:24px;font-size:14px;background:rgba(245,158,11,.6)}.ap-arrow.prev{left:4px}.ap-arrow.next{right:4px}}
+/* arrow buttons: small logo-blue circles, black arrows kept full size */
+.ap-arrow{width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;background:#0873BC;color:#000;font-size:18px}
+.ap-arrow:hover,.ap-arrow:focus{background:#0873BC;color:#000}
+@media(max-width:640px){.ap-arrow{width:20px;height:20px}.ap-arrow.prev{left:4px}.ap-arrow.next{right:4px}}
