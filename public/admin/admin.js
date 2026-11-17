@@ -272,13 +272,15 @@ document.addEventListener("click", function (e) {
 function editProduct(slug) {
   var isNew = !slug;
   var orig = isNew ? null : S.data.products.find(function (p) { return p.slug === slug; });
-  var p = isNew ? { name: "", slug: "", cat: S.cat || (S.data.categories[0] || {}).slug || "", brand: "", kw: null, voltage: null, price: 0, was: null, cost: null, stock: null, delivery: null, image: "", description: "", active: true } : clone(orig);
+  var p = isNew ? { name: "", slug: "", cat: S.cat || (S.data.categories[0] || {}).slug || "", brand: "", kw: null, voltage: null, price: 0, was: null, cost: null, stock: null, delivery: null, image: "", gallery: [], description: "", active: true } : clone(orig);
+  p.gallery = p.gallery || [];
   var slugTouched = !isNew;
   function v(x) { return x == null ? "" : esc(x); }
   openModal(
     "<h2>" + (isNew ? "Add product" : "Edit product") + "</h2>" +
     '<div class="stack">' +
     '<div class="img-edit"><img id="e-img" src="' + v(p.image) + '" alt=""><div><button class="btn" id="e-upload">Upload image</button><p class="sub">Square photos on a white background look best. Big photos are shrunk automatically.</p></div></div>' +
+    '<div><label>Extra photos <span class="sub">shown as small pictures under the main one</span></label><div class="gal" id="e-gal"></div></div>' +
     '<div><label for="e-name">Product name</label><input id="e-name" value="' + v(p.name) + '"></div>' +
     '<div class="grid2"><div><label for="e-cat">Category</label><select id="e-cat">' + S.data.categories.map(function (c) {
       return '<option value="' + esc(c.slug) + '"' + (c.slug === p.cat ? " selected" : "") + ">" + esc(c.name) + "</option>";
@@ -291,7 +293,7 @@ function editProduct(slug) {
     '<div class="grid3"><div><label for="e-kw">Size (kW) <span class="sub">for shop filter</span></label><input id="e-kw" type="number" min="0" step="0.1" value="' + v(p.kw) + '"></div>' +
     '<div><label for="e-volt">Voltage (V)</label><input id="e-volt" type="number" min="0" value="' + v(p.voltage) + '"></div>' +
     '<div><label for="e-del">Own delivery fee (R) <span class="sub">blank = use area fees</span></label><input id="e-del" type="number" min="0" value="' + v(p.delivery) + '"></div></div>' +
-    '<div><label for="e-desc">Description <span class="sub">leave a blank line between paragraphs</span></label><textarea id="e-desc" rows="6">' + v(p.description) + "</textarea></div>" +
+    '<div><label for="e-desc">Description <span class="sub">leave a blank line between paragraphs. Descriptions copied from the old site contain formatting codes like &lt;h2&gt; and &lt;li&gt;; you can edit the words between them</span></label><textarea id="e-desc" rows="8">' + v(p.description) + "</textarea></div>" +
     '<div class="grid2"><div><label for="e-slug">Web address</label><input id="e-slug" value="' + v(p.slug) + '"><p class="sub">afripowered.co.za/product/<span id="e-slug-show">' + v(p.slug) + "</span></p></div>" +
     '<div><label>&nbsp;</label><label class="check"><input type="checkbox" id="e-active"' + (p.active !== false ? " checked" : "") + "> Show on the website</label></div></div>" +
     '<p class="msg" id="e-msg"></p></div>' +
@@ -316,6 +318,17 @@ function editProduct(slug) {
   ["#e-price", "#e-cost"].forEach(function (s) { $(s).addEventListener("input", calc); });
   calc();
   $("#e-upload").onclick = function () { uploadImage(1200).then(function (u) { if (u) { p.image = u; $("#e-img").src = u; } }); };
+  function drawGallery() {
+    $("#e-gal").innerHTML = p.gallery.map(function (g, i) {
+      return '<div class="gal-item"><img src="' + esc(g) + '" alt=""><button class="icon-btn" data-gi="' + i + '" title="Remove photo">✕</button></div>';
+    }).join("") + (p.gallery.length < 12 ? '<button class="btn small" id="e-gal-add">+ Add photo</button>' : "");
+  }
+  $("#e-gal").onclick = function (e) {
+    var r = e.target.closest("[data-gi]");
+    if (r) { p.gallery.splice(+r.dataset.gi, 1); drawGallery(); return; }
+    if (e.target.closest("#e-gal-add")) uploadImage(1200).then(function (u) { if (u) { p.gallery.push(u); drawGallery(); } });
+  };
+  drawGallery();
   $("#e-cancel").onclick = closeModal;
   if (!isNew) $("#e-del-btn").onclick = function () {
     if (!confirm('Delete "' + orig.name + '"? This removes it from the website. Tip: untick "Show on the website" to hide it instead.')) return;

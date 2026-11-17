@@ -83,3 +83,10 @@
 .ap-delivery li{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
 .ap-delivery li:last-child{border-bottom:0}
 .ap-delivery small{display:block;margin-top:8px;color:#555}
+/* product page extra photos */
+.ap-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ap-thumb{width:72px;height:72px;padding:3px;border:2px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer}
+.ap-thumb.on,.ap-thumb:hover{border-color:#0873BC}
+.ap-thumb img{width:100%;height:100%;object-fit:contain;display:block}
+/* descriptions copied from the old site */
+#tab-description h2{font-size:22px;margin:18px 0 8px}#tab-description h3{font-size:18px;margin:14px 0 6px}

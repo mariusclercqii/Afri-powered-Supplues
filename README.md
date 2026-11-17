@@ -4,7 +4,11 @@
 - `src/worker.js` is a small Cloudflare Worker in front of it. It runs the admin, saves your changes, and adds them to the pages.
 - **WhatsApp number** is 27718111466. The footer keeps "© Afri-Powered 2024".
 
-## Admin: afripowered.co.za/admin
+## Admin: /admin
+
+While the site is still on its workers.dev test address, the admin is at
+`https://afri-powered-supplues.<your-subdomain>.workers.dev/admin`. After the domain moves it is `https://afripowered.co.za/admin`.
+On workers.dev every page is sent with "noindex", so Google ignores the test site and keeps showing the live one.
 
 Log in with your admin password to manage:
 
@@ -24,7 +28,11 @@ Changes show on the website within about a minute. Cost prices and stock numbers
 1. **Create the storage.** Cloudflare dashboard → *Storage & Databases* → *KV* → *Create* → name it `afri-powered-store`. Copy its **ID**.
 2. **Connect it.** In `wrangler.jsonc`, uncomment the `kv_namespaces` line and paste the ID in place of `PASTE_KV_NAMESPACE_ID_HERE`. Commit and push to GitHub.
 3. **Set the password.** Cloudflare dashboard → *Workers & Pages* → `afri-powered-supplues` → *Settings* → *Variables and Secrets* → *Add* → type **Secret**, name `ADMIN_PASSWORD`, value = your password (use a long one). Save and deploy.
-4. Open `https://afripowered.co.za/admin` and log in.
+4. Open `/admin` on the workers.dev address and log in.
+
+## Before moving afripowered.co.za to this site
+
+- Done 2026-11-17: all 56 products and their 44 distinct photos were copied from the old site. Photos are WebP files in `public/assets/products/`, and the products are in `public/data/products.json` with prices, sale prices, stock status and descriptions as they were on the old site.
 
 To change the password later, edit the `ADMIN_PASSWORD` secret. Everyone logged in is then logged out.
 After 5 wrong passwords, that internet connection is locked out for 15 minutes.

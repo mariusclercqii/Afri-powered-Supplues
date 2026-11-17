@@ -30,7 +30,10 @@ const DEFAULT_CATEGORIES = [
 export default {
   async fetch(request, env) {
     try {
-      return await route(request, env);
+      const res = await route(request, env);
+      // The workers.dev test address must not compete with the live site in Google.
+      if (new URL(request.url).hostname.endsWith(".workers.dev")) return headers(res, { "X-Robots-Tag": "noindex, nofollow" });
+      return res;
     } catch (err) {
       console.error(err && err.stack || err);
       return new Response("Something went wrong. Please try again.", { status: 500 });
@@ -89,8 +92,8 @@ async function seed(env, key) {
     const list = r.ok ? await r.json() : [];
     return list.map(p => ({
       slug: p.slug, name: p.name, cat: p.cat, brand: p.brand || "", kw: p.kw ?? null, voltage: p.voltage ?? null,
-      price: p.price, was: p.was ?? null, cost: null, stock: null, delivery: null, image: p.image || "",
-      description: "", active: true,
+      price: p.price, was: p.was ?? null, cost: p.cost ?? null, stock: p.stock ?? null, delivery: p.delivery ?? null,
+      image: p.image || "", gallery: p.gallery || [], description: p.description || "", active: p.active !== false,
     }));
   }
   if (key === "promos") {
@@ -221,12 +224,19 @@ async function productPage(req, env, slug) {
   const catLink = `/shop?cat=${encodeURIComponent(p.cat || "")}`;
   const img = p.image || "/assets/Vector-Logo-e1710787362928.png";
   const desc = (p.description || "").trim();
-  const metaDesc = (desc ? desc.replace(/\s+/g, " ").slice(0, 155) : `${p.name} at ${money(p.price)}. Order on WhatsApp from Afri-Powered Supplies.`);
+  const isHtml = /<[a-z][\s\S]*>/i.test(desc);
+  const plainDesc = (isHtml ? desc.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&") : desc).replace(/\s+/g, " ").trim();
+  const metaDesc = plainDesc ? plainDesc.slice(0, 155) : `${p.name} at ${money(p.price)}. Order on WhatsApp from Afri-Powered Supplies.`;
+  const gallery = (p.gallery || []).filter(Boolean);
   const out = p.stock === 0;
   const waText = `Hi Afri-Powered, I would like to order: ${p.name} (${money(p.price)})`;
-  const descHtml = desc
+  const descHtml = isHtml ? await sanitize(desc) : desc
     ? desc.split(/\n{2,}/).map(par => `<p>${esc(par).replace(/\n/g, "<br>")}</p>`).join("")
     : `<p>${esc(p.name)}. ${esc(catName)} supplied by Afri-Powered Supplies. WhatsApp us for stock, delivery and installation.</p>`;
+  const galleryHtml = gallery.length
+    ? `<div class="ap-gallery">${[img].concat(gallery).map((g, i) =>
+      `<button type="button" class="ap-thumb${i ? "" : " on"}" data-src="${esc(g)}" aria-label="Photo ${i + 1}"><img src="${esc(g)}" alt="" loading="lazy"></button>`).join("")}</div>`
+    : "";
   const ld = JSON.stringify({
     "@context": "https://schema.org", "@type": "Product", name: p.name, image: absUrl(url.origin, img),
     brand: { "@type": "Brand", name: p.brand || "Afri-Powered" }, description: metaDesc,
@@ -249,6 +259,7 @@ async function productPage(req, env, slug) {
     .on('meta[name="twitter:image"]', setContent(absUrl(url.origin, img)))
     .on('link[rel="canonical"]', { element(el) { el.setAttribute("href", `${url.origin}/product/${p.slug}`); } })
     .on(".woocommerce-product-gallery__image img", { element(el) { el.setAttribute("src", img); el.setAttribute("alt", p.name); el.removeAttribute("srcset"); } })
+    .on(".woocommerce-product-gallery__wrapper", { element(el) { if (galleryHtml) el.append(galleryHtml, { html: true }); } })
     .on("nav.woocommerce-breadcrumb", { element(el) {
       el.setInnerContent(`<a href="/">Home</a>&nbsp;/&nbsp;<a href="${esc(catLink)}">${esc(catName)}</a>&nbsp;/&nbsp;${esc(p.name)}`, { html: true });
     } })
@@ -481,7 +492,7 @@ function date(v, field) {
 const CLEAN = {
   async products(v) {
     const seen = new Set();
-    return list(v, 3000, "products").map((p, i) => {
+    const out = list(v, 3000, "products").map((p, i) => {
       const name = str(p.name, 200, `Product ${i + 1} name`);
       if (!name) throw new Error(`Product ${i + 1} needs a name.`);
       const s = slug(p.slug, `Web address for "${name}"`);
@@ -493,9 +504,13 @@ const CLEAN = {
         price: num(p.price, `Price for "${name}"`, { allowNull: false }), was: num(p.was, "Was price"),
         cost: num(p.cost, "Cost price"), stock: num(p.stock, "Stock", { int: true }),
         delivery: num(p.delivery, "Delivery fee"), image: link(p.image, `Image for "${name}"`),
-        description: str(p.description, 8000, "Description"), active: p.active !== false,
+        gallery: list(p.gallery || [], 12, `extra photos for "${name}"`).map(g => link(g, `Extra photo for "${name}"`)).filter(Boolean),
+        description: str(p.description, 120000, "Description"), active: p.active !== false,
       };
     });
+    // Descriptions copied from the old site contain formatting; keep only safe tags.
+    for (const p of out) if (/<[a-z][\s\S]*>/i.test(p.description)) p.description = await sanitize(p.description);
+    return out;
   },
   async categories(v) {
     const seen = new Set();

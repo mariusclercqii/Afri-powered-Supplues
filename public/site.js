@@ -36,6 +36,10 @@ $$(".grw-content-inner").forEach(function(w){
 var st=$("#ast-scroll-top");
 if(st){var f=function(){st.classList.toggle("ap-show",window.scrollY>300)};window.addEventListener("scroll",f,{passive:true});f();
   var go=function(){window.scrollTo({top:0,behavior:"smooth"})};st.addEventListener("click",go);st.addEventListener("keydown",function(e){if(e.key==="Enter")go()});}
+/* product page: extra photos swap into the main picture */
+$$(".ap-gallery").forEach(function(g){var main=$(".woocommerce-product-gallery__image img");
+  g.addEventListener("click",function(e){var b=e.target.closest(".ap-thumb");if(!b||!main)return;
+    main.src=b.getAttribute("data-src");$$(".ap-thumb",g).forEach(function(x){x.classList.toggle("on",x===b)});});});
 /* promo banner (home page) */
 var host=$("#ap-promos");
 if(host){fetch("data/promos.json").then(function(r){return r.json()}).then(function(list){
