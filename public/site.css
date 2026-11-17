@@ -204,3 +204,19 @@
   .ap-line{grid-template-columns:72px minmax(0,1fr)}.ap-line-img img{width:72px;height:72px}.ap-line-price{grid-column:2;text-align:left}
   .ap-note-box{flex-direction:column}.ap-cart-link{width:40px;height:40px}}
 .ap-q-table,.ap-q-table tbody,.ap-q-table tr{border:0!important}.ap-q-table td{border:0!important;border-top:1px solid #e5e7eb!important;font-family:Montserrat,Arial,sans-serif}.ap-q-table .ap-q-total td{border-top:2px solid #1d2433!important}.ap-q-table strong{display:block}
+/* ===== boxed page width: content sits in a centred column with side margins, like a printed page ===== */
+:root{--ap-max:1320px;--ap-gut:clamp(16px,3vw,40px)}
+/* header: logo, search and contact links line up with the page column */
+#masthead .ast-container{max-width:calc(var(--ap-max) + 2*var(--ap-gut))!important;padding-left:var(--ap-gut)!important;padding-right:var(--ap-gut)!important;margin-left:auto;margin-right:auto}
+/* home banner: boxed, rounded, never stretched */
+.ap-promos{width:calc(100% - 2*var(--ap-gut));max-width:var(--ap-max);margin:24px auto 8px;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(8,30,60,.18);background:#0b1830}
+.ap-promos .ap-slide.ap-img img{aspect-ratio:2048/768;object-fit:cover}
+/* home sections: backgrounds stay full width, content sits in the page column */
+.elementor-3962 > section.elementor-section > .elementor-container{max-width:var(--ap-max)!important;width:calc(100% - 2*var(--ap-gut));margin-left:auto;margin-right:auto}
+/* other pages (shop, cart, checkout, product, policies) */
+body:not(.home) .site-content > .ast-container{max-width:calc(var(--ap-max) + 2*var(--ap-gut))!important;padding-left:var(--ap-gut)!important;padding-right:var(--ap-gut)!important;margin-left:auto;margin-right:auto;box-sizing:border-box}
+/* footer columns keep a margin on narrow screens */
+#colophon .elementor-section > .elementor-container{width:calc(100% - 2*var(--ap-gut));margin-left:auto;margin-right:auto}
+/* images never overflow their box */
+.site-content img{max-width:100%}
+@media(max-width:640px){.ap-promos{border-radius:10px;margin-top:14px}}
