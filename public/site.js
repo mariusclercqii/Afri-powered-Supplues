@@ -25,6 +25,11 @@ $$(".elementor-accordion").forEach(function(acc){
   });
   $$(".elementor-tab-content",acc).forEach(function(c){if(!c.classList.contains("elementor-active"))c.style.display="none";});
 });
+/* Google reviews: set the size class the old plugin script used to set (1 review per view on phones, up to 5 on wide screens) */
+$$(".wp-gr .grw-row").forEach(function(row){var box=row.closest(".wp-gr");
+  function fit(){var w=box.offsetWidth;if(!w)return;var s=w<510?"xs":w<750?"x":w<960?"s":w<1150?"m":w<1300?"l":"xl";
+    var c=row.className.replace(/\s*\bgrw-row-(xs|x|s|m|l|xl)\b/g,"")+" grw-row-"+s;if(c!==row.className)row.className=c;}
+  fit();if(window.ResizeObserver)new ResizeObserver(fit).observe(box);else window.addEventListener("resize",fit);});
 /* reviews slider arrows */
 $$(".grw-content-inner").forEach(function(w){
   var sl=$(".rpi-slides",w),p=$(".grw-prev",w),n=$(".grw-next",w);if(!sl)return;
