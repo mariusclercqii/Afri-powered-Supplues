@@ -146,3 +146,4 @@ td input.cell.stock{width:70px}
   .rows>.row{flex-wrap:wrap}
 }
 .gal{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.gal-item{position:relative}.gal-item img{width:72px;height:72px;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:#f8fafc;display:block}.gal-item .icon-btn{position:absolute;top:-8px;right:-8px;width:24px;height:24px;font-size:11px;border-radius:50%}
+.badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--orange);color:#000;font-size:11px;line-height:18px;text-align:center}.stat-link{text-decoration:none;color:inherit;border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}.stat-link:hover{background:#f3f9fd}

@@ -273,7 +273,12 @@ async function productPage(req, env, slug) {
         : `<p class="ap-stock ap-in">In stock</p>`, { html: true });
     } })
     .on(".ap-buy", { element(el) {
-      el.setInnerContent(`<a class="ap-btn ap-wa-btn" href="https://wa.me/${WA}?text=${encodeURIComponent(waText)}" rel="noopener" target="_blank">${out ? "Ask about stock on WhatsApp" : "Order on WhatsApp"}</a>`, { html: true });
+      el.setInnerContent(
+        `<div class="ap-qty"><button type="button" data-q="-1" aria-label="One less">−</button>` +
+        `<input type="number" min="1" max="99" value="1" aria-label="Quantity"><button type="button" data-q="1" aria-label="One more">+</button></div>` +
+        `<button type="button" class="ap-btn ap-cart-btn" data-add-cart="${esc(p.slug)}" data-name="${esc(p.name)}">Add to cart</button>` +
+        `<a class="ap-btn ap-wa-btn" href="https://wa.me/${WA}?text=${encodeURIComponent(waText)}" rel="noopener" target="_blank">${out ? "Ask about stock on WhatsApp" : "Order on WhatsApp"}</a>` +
+        (out ? `<p class="ap-small">You can still add it to your cart. We'll confirm the lead time in your quote.</p>` : ""), { html: true });
       const d = deliveryHtml(p, settings);
       if (d) el.after(d, { html: true });
     } })
@@ -331,6 +336,11 @@ async function api(req, env, url) {
   const p = url.pathname;
   const m = req.method;
 
+  // Public: customers send quote requests and view their own quote.
+  if (p === "/api/quote" && m === "POST") return createQuote(req, env, url);
+  const qv = p.match(/^\/api\/quote\/([A-Z0-9-]{6,20})$/);
+  if (qv && m === "GET") return viewQuote(env, qv[1], url.searchParams.get("t") || "");
+
   if (m !== "GET" && m !== "HEAD") {
     // Same-site check: the admin app always sends this header and the matching Origin.
     const origin = req.headers.get("Origin");
@@ -365,6 +375,34 @@ async function api(req, env, url) {
     return json({ ok: true, [save[1]]: clean }, 0);
   }
 
+  if (p === "/api/admin/quotes" && m === "GET") {
+    const out = [];
+    let cursor;
+    for (let i = 0; i < 10; i++) {
+      const r = await env.STORE.list({ prefix: "quote:", cursor, limit: 1000 });
+      for (const k of r.keys) out.push(k.metadata || { ref: k.name.slice(6) });
+      if (r.list_complete) break;
+      cursor = r.cursor;
+    }
+    out.sort((a, b) => String(b.created || "").localeCompare(String(a.created || "")));
+    return json({ quotes: out }, 0);
+  }
+  const qa = p.match(/^\/api\/admin\/quotes\/([A-Z0-9-]{6,20})$/);
+  if (qa) {
+    const key = "quote:" + qa[1];
+    const q = await env.STORE.get(key, { type: "json" });
+    if (!q) return err(404, "Quote not found.");
+    if (m === "GET") return json(q, 0);
+    if (m === "DELETE") { await env.STORE.delete(key); return json({ ok: true }, 0); }
+    if (m === "PUT") {
+      const b = await readJson(req, 50000);
+      if (!b || typeof b !== "object") return err(400, "That data could not be read.");
+      try { applyQuoteEdit(q, b); } catch (e) { return err(400, e.message); }
+      await saveQuote(env, q);
+      return json(q, 0);
+    }
+  }
+
   if (p === "/api/admin/upload" && m === "POST") {
     const type = (req.headers.get("Content-Type") || "").split(";")[0].trim();
     const ext = IMG_TYPES[type];
@@ -379,6 +417,149 @@ async function api(req, env, url) {
   }
 
   return err(404, "Not found.");
+}
+
+/* ---------------- quotes ---------------- */
+
+const PROVINCES = ["Eastern Cape", "Free State", "Gauteng", "KwaZulu-Natal", "Limpopo", "Mpumalanga",
+  "North West", "Northern Cape", "Western Cape"];
+const QUOTE_STATUSES = ["new", "quoted", "paid", "done", "cancelled"];
+const MAX_QUOTES_PER_HOUR = 8;
+
+function randomHex(bytes) {
+  return [...crypto.getRandomValues(new Uint8Array(bytes))].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function newRef(env, now) {
+  const ymd = now.toISOString().slice(2, 10).replace(/-/g, "");
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (let i = 0; i < 6; i++) {
+    const r = [...crypto.getRandomValues(new Uint8Array(4))].map(b => abc[b % abc.length]).join("");
+    const ref = `AP${ymd}-${r}`;
+    if (!(await env.STORE.get("quote:" + ref))) return ref;
+  }
+  throw new Error("Please try again.");
+}
+
+function quoteTotals(q) {
+  let listed = 0, sub = 0;
+  for (const i of q.items) {
+    listed += i.listed * i.qty;
+    sub += (i.final ?? i.listed) * i.qty;
+  }
+  const r = n => Math.round(n * 100) / 100;
+  return { listed: r(listed), sub: r(sub), total: r(sub + (Number(q.delivery) || 0)) };
+}
+
+async function saveQuote(env, q) {
+  const t = quoteTotals(q);
+  q.total = t.total;
+  q.updated = new Date().toISOString();
+  await env.STORE.put("quote:" + q.ref, JSON.stringify(q), {
+    metadata: {
+      ref: q.ref, name: q.name.slice(0, 60), status: q.status, created: q.created, total: t.total, listed: t.listed,
+      count: q.items.reduce((a, i) => a + i.qty, 0), method: q.method,
+    },
+  });
+}
+
+async function createQuote(req, env, url) {
+  if (req.headers.get("Origin") !== url.origin) return err(403, "Request blocked.");
+  if (!env.STORE) return err(503, "Quote requests are not available right now. Please WhatsApp us.");
+  const ip = req.headers.get("CF-Connecting-IP") || "local";
+  const rk = "qrl:" + ip;
+  const sent = Number(await env.STORE.get(rk)) || 0;
+  if (sent >= MAX_QUOTES_PER_HOUR) return err(429, "Too many quote requests from this connection. Please WhatsApp us instead.");
+  const b = await readJson(req, 30000);
+  if (!b || typeof b !== "object") return err(400, "That request could not be read. Please try again.");
+  if (b.website) return err(400, "That request could not be read. Please try again."); // hidden field only bots fill in
+  let q;
+  try {
+    q = await buildQuote(b, env);
+  } catch (e) {
+    return err(400, e.message || "Some details are missing.");
+  }
+  await env.STORE.put(rk, String(sent + 1), { expirationTtl: 3600 });
+  await saveQuote(env, q);
+  return json({ ok: true, ref: q.ref, token: q.token }, 0);
+}
+
+async function buildQuote(b, env) {
+  const need = (v, max, what) => {
+    const x = str(v, max, what);
+    if (!x) throw new Error(`Please add ${what}.`);
+    return x;
+  };
+  const name = need(b.name, 100, "your full name");
+  const email = need(b.email, 150, "your email address");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new Error("Please add a valid email address.");
+  const phone = need(b.phone, 30, "your phone or WhatsApp number");
+  if (phone.replace(/\D/g, "").length < 9) throw new Error("Please add a valid phone or WhatsApp number.");
+  const method = b.method === "collect" ? "collect" : "delivery";
+  let address = null;
+  if (method === "delivery") {
+    address = {
+      street: need(b.street, 200, "your street address"), unit: str(b.unit, 100, "Unit"),
+      suburb: need(b.suburb, 100, "your suburb"), city: need(b.city, 100, "your city or town"),
+      province: need(b.province, 40, "your province"), postal: need(b.postal, 10, "your postal code"),
+    };
+    if (!PROVINCES.includes(address.province)) throw new Error("Please choose your province.");
+    if (!/^\d{4}$/.test(address.postal)) throw new Error("Please add a four-digit postal code.");
+  }
+  if (b.consent !== true) throw new Error("Please tick the box to confirm you understand.");
+  const note = str(b.note, 1000, "Order note");
+
+  const prods = await load(env, "products");
+  const items = [];
+  for (const w of list(b.items || [], 50, "products in the cart")) {
+    const p = w && prods.find(x => x.slug === w.slug && x.active !== false);
+    const qty = Math.round(Number(w && w.qty));
+    if (!p || !(qty >= 1 && qty <= 99)) continue;
+    const have = items.find(i => i.slug === p.slug);
+    if (have) { have.qty = Math.min(99, have.qty + qty); continue; }
+    items.push({ slug: p.slug, name: p.name, image: p.image || "", qty, listed: p.price, final: null, cost: p.cost ?? null });
+  }
+  if (!items.length) throw new Error("Your cart is empty. Please add products first.");
+
+  const now = new Date();
+  return {
+    ref: await newRef(env, now), token: randomHex(16), created: now.toISOString(), status: "new",
+    name, email, phone, method, address, note, items,
+    delivery: null, payLink: "", message: "", validUntil: "", adminNote: "",
+  };
+}
+
+async function viewQuote(env, ref, token) {
+  if (!env.STORE) return err(404, "Quote not found.");
+  const q = await env.STORE.get("quote:" + ref, { type: "json" });
+  if (!q || !token || !sameBytes(enc.encode(token), enc.encode(q.token))) return err(404, "We couldn't find that quote. Please use the link we sent you.");
+  const ready = q.status !== "new";
+  return json({
+    ref: q.ref, status: q.status, created: q.created, method: q.method,
+    items: q.items.map(i => ({ name: i.name, image: i.image, qty: i.qty, listed: i.listed, final: ready ? (i.final ?? i.listed) : null })),
+    delivery: ready ? (Number(q.delivery) || 0) : null, total: ready ? quoteTotals(q).total : null,
+    validUntil: ready ? q.validUntil : "", message: ready ? q.message : "", payLink: q.status === "quoted" ? q.payLink : "",
+  }, 0);
+}
+
+function applyQuoteEdit(q, b) {
+  if (b.status != null) {
+    if (!QUOTE_STATUSES.includes(b.status)) throw new Error("Unknown status.");
+    q.status = b.status;
+  }
+  if (Array.isArray(b.items)) {
+    if (b.items.length !== q.items.length) throw new Error("The products in this quote changed. Please reload it.");
+    b.items.forEach((x, i) => { q.items[i].final = num(x && x.final, `Price for "${q.items[i].name}"`); });
+  }
+  if ("delivery" in b) q.delivery = num(b.delivery, "Delivery fee");
+  if ("payLink" in b) {
+    const l = str(b.payLink, 1000, "Payment link");
+    if (l && !/^https:\/\//.test(l)) throw new Error("The payment link must start with https://");
+    q.payLink = l;
+  }
+  if ("message" in b) q.message = str(b.message, 2000, "Message to the customer");
+  if ("validUntil" in b) q.validUntil = date(b.validUntil, "Valid until");
+  if ("adminNote" in b) q.adminNote = str(b.adminNote, 2000, "Private note");
 }
 
 async function readJson(req, max) {

@@ -36,6 +36,27 @@ $$(".grw-content-inner").forEach(function(w){
 var st=$("#ast-scroll-top");
 if(st){var f=function(){st.classList.toggle("ap-show",window.scrollY>300)};window.addEventListener("scroll",f,{passive:true});f();
   var go=function(){window.scrollTo({top:0,behavior:"smooth"})};st.addEventListener("click",go);st.addEventListener("keydown",function(e){if(e.key==="Enter")go()});}
+/* cart: kept in this browser only; cart.js handles the cart and checkout pages */
+var CK="ap_cart";
+function cartGet(){try{var c=JSON.parse(localStorage.getItem(CK)||"[]");return Array.isArray(c)?c.filter(function(x){return x&&typeof x.slug==="string"&&x.qty>0}):[]}catch(e){return[]}}
+function cartSet(c){try{localStorage.setItem(CK,JSON.stringify(c))}catch(e){}cartCount()}
+function cartAdd(slug,qty){var c=cartGet(),l=c.filter(function(x){return x.slug===slug})[0];if(l)l.qty=Math.min(99,l.qty+qty);else c.push({slug:slug,qty:qty});cartSet(c)}
+function cartCount(){var n=cartGet().reduce(function(a,x){return a+x.qty},0);$$(".ap-cart-count").forEach(function(e){e.textContent=n>99?"99+":n;e.hidden=!n})}
+var CART_SVG='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM5.2 4l.6 3h13.7c.7 0 1.2.7 1 1.3l-1.8 6.1c-.2.6-.7 1-1.3 1H8.3l.4 2H19v2H7.1L4 2H1V0h4.6l.6 4Z"/></svg>';
+$$(".ap-searchbar").forEach(function(s){var a=document.createElement("a");a.href="/cart";a.className="ap-cart-link";a.setAttribute("aria-label","View cart");a.innerHTML=CART_SVG+'<span class="ap-cart-count" hidden>0</span>';s.appendChild(a)});
+cartCount();window.addEventListener("storage",cartCount);document.addEventListener("ap:cart",cartCount);
+var toastEl;
+function added(name,q){if(!toastEl){toastEl=document.createElement("div");toastEl.className="ap-added";toastEl.setAttribute("role","status");document.body.appendChild(toastEl)}
+  toastEl.innerHTML='<span class="ap-added-txt"></span><a href="/cart" class="ap-btn">View cart</a>';$(".ap-added-txt",toastEl).textContent="Added to cart: "+(q>1?q+" × ":"")+name;
+  toastEl.classList.add("on");clearTimeout(added.t);added.t=setTimeout(function(){toastEl.classList.remove("on")},4500)}
+document.addEventListener("click",function(e){
+  var q=e.target.closest(".ap-qty button[data-q]");
+  if(q){var i=$("input",q.parentNode);i.value=Math.max(1,Math.min(99,(parseInt(i.value,10)||1)+(+q.getAttribute("data-q"))));return}
+  var b=e.target.closest("[data-add-cart]");if(!b)return;e.preventDefault();
+  var box=b.closest(".ap-buy"),qi=box&&$(".ap-qty input",box),n=qi?Math.max(1,Math.min(99,parseInt(qi.value,10)||1)):1;
+  cartAdd(b.getAttribute("data-add-cart"),n);added(b.getAttribute("data-name")||"item",n);
+  b.classList.add("ap-ok");setTimeout(function(){b.classList.remove("ap-ok")},1200);
+});
 /* product page: extra photos swap into the main picture */
 $$(".ap-gallery").forEach(function(g){var main=$(".woocommerce-product-gallery__image img");
   g.addEventListener("click",function(e){var b=e.target.closest(".ap-thumb");if(!b||!main)return;

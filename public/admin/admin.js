@@ -109,6 +109,7 @@ function start() {
   $("#view").innerHTML = '<div class="loading">Loading…</div>';
   api("/api/admin/data").then(function (d) {
     S.data = d; Object.keys(d).forEach(snapshot); go(location.hash.slice(1) || "dashboard");
+    loadQuotes().then(function () { if (S.tab === "dashboard") render(); }).catch(function () {});
   }).catch(function (e) {
     if (e.status === 401) return;
     $("#view").innerHTML = '<div class="card"><h2>Admin is not ready yet</h2><p>' + esc(e.message) + "</p></div>";
@@ -166,7 +167,7 @@ function uploadImage(maxW) {
 }
 
 /* ============ modal ============ */
-function openModal(html) { $("#modal-card").innerHTML = html; $("#modal").hidden = false; document.body.style.overflow = "hidden"; }
+function openModal(html) { $("#modal-card").oninput = null; $("#modal-card").innerHTML = html; $("#modal").hidden = false; document.body.style.overflow = "hidden"; }
 function closeModal() { $("#modal").hidden = true; $("#modal-card").innerHTML = ""; document.body.style.overflow = ""; }
 $("#modal").addEventListener("mousedown", function (e) { if (e.target.id === "modal") closeModal(); });
 document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("#modal").hidden) closeModal(); });
@@ -198,6 +199,8 @@ function dashboard() {
   $("#view").innerHTML =
     '<div class="head"><h2>Dashboard</h2><a class="btn" href="/" target="_blank" rel="noopener">View website ↗</a></div>' +
     '<div class="stats">' +
+    (S.quotes ? '<a class="stat stat-link" href="#quotes"><small>New quote requests</small><b>' + S.quotes.filter(function (q) { return q.status === "new"; }).length +
+      "</b><em>" + S.quotes.filter(function (q) { return q.status === "quoted"; }).length + " quotes waiting for payment</em></a>" : "") +
     stat("Products on the site", live.length, (P.length - live.length) + " hidden") +
     stat("Average profit margin", avg == null ? "–" : avg.toFixed(1) + "%", withCost.length + " of " + live.length + " have a cost price") +
     stat("Stock value at cost", money(costVal), tracked.length + " products with stock counts") +
@@ -580,7 +583,140 @@ function delivery() {
   $$("[data-edit]").forEach(function (b) { b.onclick = function () { editProduct(b.dataset.edit); }; });
 }
 
-var VIEWS = { dashboard: dashboard, products: products, categories: categories, banners: banners, pages: pages, delivery: delivery };
+/* ============ quotes ============ */
+var QSTAT = { "new": ["New request", "blue"], quoted: ["Quote sent", "amber"], paid: ["Paid", "green"], done: ["Completed", ""], cancelled: ["Cancelled", "red"] };
+var QFILTERS = [["open", "Open (new + sent)"], ["new", "New requests"], ["quoted", "Quote sent"], ["paid", "Paid"], ["done", "Completed"], ["cancelled", "Cancelled"], ["all", "All quotes"]];
+S.qFilter = "open"; S.quotes = null;
+function money2(n) {
+  if (n == null || n === "" || isNaN(n)) return "–";
+  var v = Math.round(Number(n) * 100) / 100, w = Math.floor(Math.abs(v)), c = Math.round((Math.abs(v) - w) * 100);
+  return (v < 0 ? "-R" : "R") + String(w).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + (c ? "," + String(c).padStart(2, "0") : "");
+}
+function qTag(s) { var t = QSTAT[s] || [s, ""]; return '<span class="tag ' + t[1] + '">' + esc(t[0]) + "</span>"; }
+function fmtDate(iso) { try { return new Date(iso).toLocaleString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return iso || ""; } }
+function intlPhone(p) { var d = String(p || "").replace(/\D/g, ""); if (/^0\d{9}$/.test(d)) d = "27" + d.slice(1); return d; }
+function loadQuotes() {
+  return api("/api/admin/quotes").then(function (d) {
+    S.quotes = d.quotes || [];
+    var n = S.quotes.filter(function (q) { return q.status === "new"; }).length, b = $("#q-badge");
+    b.textContent = n; b.hidden = !n; return S.quotes;
+  });
+}
+function quotes() {
+  $("#view").innerHTML = '<div class="head"><h2>Quotes</h2><select id="q-f" style="width:auto">' + QFILTERS.map(function (f) {
+    return '<option value="' + f[0] + '"' + (S.qFilter === f[0] ? " selected" : "") + ">" + f[1] + "</option>";
+  }).join("") + '</select><button class="btn" id="q-reload">Refresh</button></div>' +
+    '<p class="hint">Quote requests from the website checkout. Open one to confirm stock, set final prices and delivery, then send it to the customer on WhatsApp. New requests can take up to a minute to appear.</p>' +
+    '<div id="q-list"><div class="loading">Loading quotes…</div></div>';
+  $("#q-f").onchange = function () { S.qFilter = this.value; drawQuotes(); };
+  $("#q-reload").onclick = function () { $("#q-list").innerHTML = '<div class="loading">Loading quotes…</div>'; loadQuotes().then(drawQuotes); };
+  loadQuotes().then(drawQuotes).catch(function (e) { $("#q-list").innerHTML = '<div class="card empty">' + esc(e.message) + "</div>"; });
+}
+function drawQuotes() {
+  var box = $("#q-list"); if (!box || !S.quotes) return;
+  var f = S.qFilter, L = S.quotes.filter(function (q) { return f === "all" || (f === "open" ? (q.status === "new" || q.status === "quoted") : q.status === f); });
+  if (!L.length) { box.innerHTML = '<div class="card empty">' + (S.quotes.length ? "No quotes in this list." : "No quote requests yet. They appear here when customers use the checkout.") + "</div>"; return; }
+  box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Reference</th><th>Received</th><th>Customer</th><th class="num">Items</th><th class="num">Listed</th><th class="num">Quote total</th><th>Status</th><th></th></tr></thead><tbody>' +
+    L.map(function (q) {
+      return '<tr><td class="pname"><a href="#" data-q="' + esc(q.ref) + '">' + esc(q.ref) + "</a></td><td>" + esc(fmtDate(q.created)) + "</td><td>" + esc(q.name) +
+        '<small class="sub" style="display:block">' + (q.method === "collect" ? "Collection" : "Delivery") + '</small></td><td class="num">' + (q.count || "") + '</td><td class="num">' + money2(q.listed) +
+        '</td><td class="num">' + (q.status === "new" ? '<span class="sub">to confirm</span>' : money2(q.total)) + "</td><td>" + qTag(q.status) +
+        '</td><td class="num"><button class="btn small" data-q="' + esc(q.ref) + '">Open</button></td></tr>';
+    }).join("") + "</tbody></table></div>";
+  $$("[data-q]", box).forEach(function (b) { b.onclick = function (e) { e.preventDefault(); openQuote(b.dataset.q); }; });
+}
+function openQuote(ref) {
+  openModal('<div class="loading">Loading quote…</div>');
+  api("/api/admin/quotes/" + encodeURIComponent(ref)).then(drawQuote).catch(function (e) { $("#modal-card").innerHTML = '<p class="msg">' + esc(e.message) + '</p><div class="foot"><button class="btn" id="q-close">Close</button></div>'; $("#q-close").onclick = closeModal; });
+}
+function drawQuote(q) {
+  var zones = (S.data.settings.zones || []), a = q.address || {};
+  var prov = a.province ? zones.filter(function (z) { return z.name.toLowerCase().indexOf(a.province.toLowerCase()) > -1; })[0] : null;
+  var link = location.origin + "/quote?ref=" + encodeURIComponent(q.ref) + "&t=" + encodeURIComponent(q.token);
+  var phone = intlPhone(q.phone);
+  openModal(
+    '<div class="head" style="margin-bottom:6px"><h2>Quote ' + esc(q.ref) + '</h2><select id="q-status" style="width:auto">' + Object.keys(QSTAT).map(function (k) {
+      return '<option value="' + k + '"' + (q.status === k ? " selected" : "") + ">" + QSTAT[k][0] + "</option>";
+    }).join("") + "</select></div>" +
+    '<p class="sub" style="margin:0 0 14px">Received ' + esc(fmtDate(q.created)) + (q.updated && q.updated !== q.created ? " · last saved " + esc(fmtDate(q.updated)) : "") + "</p>" +
+    '<div class="grid2"><div class="card" style="padding:14px"><h3>Customer</h3><p style="margin:0"><b>' + esc(q.name) + "</b><br>" +
+    '<a href="https://wa.me/' + esc(phone) + '" target="_blank" rel="noopener">' + esc(q.phone) + "</a> (WhatsApp)<br>" +
+    '<a href="mailto:' + esc(q.email) + '">' + esc(q.email) + "</a></p></div>" +
+    '<div class="card" style="padding:14px"><h3>' + (q.method === "collect" ? "Collection" : "Delivery") + "</h3><p style=\"margin:0\">" +
+    (q.method === "collect" ? "Customer will collect." : esc(a.street) + (a.unit ? ", " + esc(a.unit) : "") + "<br>" + esc(a.suburb) + ", " + esc(a.city) + "<br>" + esc(a.province) + " " + esc(a.postal)) + "</p></div></div>" +
+    (q.note ? '<div class="card" style="padding:14px;margin-top:12px"><h3>Customer note</h3><p style="margin:0;white-space:pre-wrap">' + esc(q.note) + "</p></div>" : "") +
+    '<h3 style="margin-top:18px">Products</h3><div class="table-wrap"><table><thead><tr><th></th><th>Product</th><th class="num">Qty</th><th class="num">Listed each</th><th class="num">Final price each</th><th class="num">Line total</th><th class="num">Profit</th></tr></thead><tbody id="q-items">' +
+    q.items.map(function (i, n) {
+      return '<tr data-n="' + n + '"><td>' + (i.image ? '<img class="thumb" src="' + esc(i.image) + '" alt="">' : "") + '</td><td class="pname">' + esc(i.name) + "</td>" +
+        '<td class="num">' + i.qty + '</td><td class="num">' + money2(i.listed) + '</td><td class="num"><input class="cell" type="number" min="0" step="0.01" value="' + (i.final ?? i.listed) + '" aria-label="Final price each"></td>' +
+        '<td class="num" data-line></td><td class="num" data-profit></td></tr>';
+    }).join("") + "</tbody></table></div>" +
+    '<div class="grid3" style="margin-top:14px"><div><label for="q-del">Delivery fee (R)</label><input id="q-del" type="number" min="0" step="0.01" value="' + (q.delivery ?? "") + '" placeholder="' + (q.method === "collect" ? "0" : "") + '">' +
+    (prov ? '<p class="sub">Your ' + esc(prov.name) + " fee is " + money2(prov.fee) + ' <button class="btn small" id="q-use-zone" type="button">Use it</button></p>' : (zones.length ? '<p class="sub">' + zones.map(function (z) { return esc(z.name) + " " + money2(z.fee); }).join(" · ") + "</p>" : "")) + "</div>" +
+    '<div><label for="q-valid">Valid until <span class="sub">optional</span></label><input id="q-valid" type="date" value="' + esc(q.validUntil) + '"></div>' +
+    '<div class="calc" id="q-calc" style="grid-template-columns:1fr 1fr"></div></div>' +
+    '<div style="margin-top:14px"><label for="q-msg">Message to the customer <span class="sub">shown on their quote page</span></label><textarea id="q-msg" rows="3" placeholder="e.g. All items in stock. Delivery by Friday.">' + esc(q.message) + "</textarea></div>" +
+    '<div style="margin-top:14px"><label for="q-pay">Payment link <span class="sub">paste a PayFast, Yoco or SnapScan payment link for the total. The customer sees a Pay now button</span></label><input id="q-pay" type="url" placeholder="https://" value="' + esc(q.payLink) + '"></div>' +
+    '<div style="margin-top:14px"><label for="q-admin">Private note <span class="sub">only you see this</span></label><textarea id="q-admin" rows="2">' + esc(q.adminNote) + "</textarea></div>" +
+    '<p class="msg" id="q-msg-err"></p>' +
+    '<div class="foot"><button class="btn danger left" id="q-delete">Delete</button><button class="btn" id="q-copy">Copy customer link</button><a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">Customer view ↗</a>' +
+    '<button class="btn" id="q-save">Save</button><button class="btn primary" id="q-send">Save &amp; send on WhatsApp</button></div>'
+  );
+  function read() {
+    return {
+      status: $("#q-status").value, delivery: numOrNull($("#q-del").value), validUntil: $("#q-valid").value,
+      message: $("#q-msg").value.trim(), payLink: $("#q-pay").value.trim(), adminNote: $("#q-admin").value.trim(),
+      items: $$("#q-items tr").map(function (tr) { return { final: numOrNull($("input", tr).value) }; }),
+    };
+  }
+  function calc() {
+    var b = read(), sub = 0, profit = 0, costKnown = true;
+    $$("#q-items tr").forEach(function (tr) {
+      var i = q.items[+tr.dataset.n], f = numOrNull($("input", tr).value); if (f == null) f = i.listed;
+      var line = f * i.qty; sub += line; $("[data-line]", tr).textContent = money2(line);
+      if (i.cost != null) { var pr = (f - i.cost) * i.qty; profit += pr; $("[data-profit]", tr).innerHTML = '<span class="' + (pr < 0 ? "bad" : "good") + '">' + money2(pr) + "</span>"; }
+      else { costKnown = false; $("[data-profit]", tr).innerHTML = '<span class="none">no cost</span>'; }
+    });
+    var total = sub + (b.delivery || 0);
+    $("#q-calc").innerHTML = '<div><small>Quote total</small><b>' + money2(total) + '</b></div><div><small>Profit on products' + (costKnown ? "" : " (some costs missing)") + "</small><b>" + money2(profit) + "</b></div>";
+    return total;
+  }
+  $("#modal-card").oninput = calc; calc();
+  if ($("#q-use-zone")) $("#q-use-zone").onclick = function () { $("#q-del").value = prov.fee; calc(); };
+  function save(extra) {
+    var b = read(); Object.assign(b, extra || {}); $("#q-msg-err").textContent = "";
+    return api("/api/admin/quotes/" + encodeURIComponent(q.ref), { method: "PUT", json: b }).then(function (d) {
+      q = d; $("#q-status").value = d.status; toast("Quote saved."); loadQuotes().then(drawQuotes).catch(function () {}); return d;
+    }).catch(function (e) { $("#q-msg-err").textContent = e.message; throw e; });
+  }
+  $("#q-save").onclick = function () { save().catch(function () {}); };
+  $("#q-send").onclick = function () {
+    var w = window.open("about:blank", "_blank");
+    var extra = $("#q-status").value === "new" ? { status: "quoted" } : {};
+    save(extra).then(function (d) {
+      var first = d.name.split(" ")[0], t = quoteTotalsLocal(d);
+      var lines = d.items.map(function (i) { return "• " + i.qty + " × " + i.name + ": " + money2((i.final ?? i.listed) * i.qty); }).join("\n");
+      var text = "Hi " + first + ", your Afri-Powered quote " + d.ref + " is ready.\n\n" + lines + "\n" +
+        (d.method === "collect" ? "Collection: Free" : "Delivery: " + (d.delivery ? money2(d.delivery) : "Free")) + "\nTotal: " + money2(t) +
+        (d.validUntil ? "\nValid until: " + d.validUntil : "") + (d.message ? "\n\n" + d.message : "") +
+        "\n\nView" + (d.payLink ? " and pay" : "") + " here: " + link + "\n\nThank you for choosing Afri-Powered Supplies!";
+      var url = "https://wa.me/" + phone + "?text=" + encodeURIComponent(text);
+      if (w) w.location = url; else location.href = url;
+    }).catch(function () { if (w) w.close(); });
+  };
+  $("#q-copy").onclick = function () {
+    (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () { toast("Customer link copied."); })
+      .catch(function () { prompt("Copy this link:", link); });
+  };
+  $("#q-delete").onclick = function () {
+    if (!confirm("Delete quote " + q.ref + "? This can't be undone. Tip: set the status to Cancelled instead to keep a record.")) return;
+    api("/api/admin/quotes/" + encodeURIComponent(q.ref), { method: "DELETE" }).then(function () { closeModal(); toast("Quote deleted."); loadQuotes().then(drawQuotes); })
+      .catch(function (e) { $("#q-msg-err").textContent = e.message; });
+  };
+}
+function quoteTotalsLocal(d) { return d.items.reduce(function (a, i) { return a + (i.final ?? i.listed) * i.qty; }, 0) + (Number(d.delivery) || 0); }
+
+var VIEWS = { dashboard: dashboard, quotes: quotes, products: products, categories: categories, banners: banners, pages: pages, delivery: delivery };
 
 /* ============ go ============ */
 api("/api/admin/session").then(start).catch(function (e) { if (e.status !== 401) showLogin(e.message); });
