@@ -50,6 +50,40 @@ function cartCount(){var n=cartGet().reduce(function(a,x){return a+x.qty},0);$$(
 var CART_SVG='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM5.2 4l.6 3h13.7c.7 0 1.2.7 1 1.3l-1.8 6.1c-.2.6-.7 1-1.3 1H8.3l.4 2H19v2H7.1L4 2H1V0h4.6l.6 4Z"/></svg>';
 $$(".ap-searchbar").forEach(function(s){var a=document.createElement("a");a.href="/cart";a.className="ap-cart-link";a.setAttribute("aria-label","View cart");a.innerHTML=CART_SVG+'<span class="ap-cart-count" hidden>0</span>';s.appendChild(a)});
 cartCount();window.addEventListener("storage",cartCount);document.addEventListener("ap:cart",cartCount);
+/* light / dark mode. The original design sets white backgrounds and black text element by element, so instead of
+   fighting those rules we measure each element's ORIGINAL colours once and mark it: .ap-paper (white area) / .ap-ink (black text). */
+var TK="ap_theme",root=document.documentElement,mo=null;
+function isDark(){return root.getAttribute("data-theme")==="dark"}
+function col(c){var m=String(c).match(/[\d.]+/g);if(!m||m.length<3)return null;if(m.length>3&&+m[3]<0.5)return null;
+  var r=+m[0],g=+m[1],b=+m[2];return{L:(0.2126*r+0.7152*g+0.0722*b)/255,S:Math.max(r,g,b)-Math.min(r,g,b)}}
+function backOf(e){for(;e&&e.nodeType===1&&e!==document.body;e=e.parentElement){var b=col(getComputedStyle(e).backgroundColor);if(b)return b}return{L:1,S:0}}
+var SKIP="#ap-promos,#colophon,svg,img,video,iframe,.ap-added,.ap-theme-btn,.ap-cart-link,.joinchat";
+function markTheme(scope){
+  var was=isDark();root.classList.add("ap-measure");if(was)root.removeAttribute("data-theme");  // measure the original light colours (fades paused)
+  var els=scope?[scope].concat($$("*",scope)):$$("body *");
+  els.forEach(function(e){
+    if(e.nodeType!==1||e.closest(SKIP))return;
+    var s=getComputedStyle(e);
+    if(!e.classList.contains("ap-paper")){var b=col(s.backgroundColor);if(b&&b.L>0.8&&b.S<40)e.classList.add("ap-paper")}
+    if(!e.classList.contains("ap-ink")&&!e.classList.contains("ap-mute")){var t=col(s.color);if(t&&t.L<0.62&&(t.L<0.3||t.S<40)){var bg=backOf(e);
+      if(bg.L>0.6&&bg.S<60)e.classList.add(t.L<0.3?"ap-ink":"ap-mute")}}
+  });
+  if(was)root.setAttribute("data-theme","dark");
+  requestAnimationFrame(function(){root.classList.remove("ap-measure")});
+}
+function watch(on){if(!window.MutationObserver)return;if(on&&!mo){var q=[];mo=new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)q.push(n)})});
+  if(q.length)requestAnimationFrame(function(){var l=q;q=[];if(mo)mo.disconnect();l.forEach(function(n){if(n.isConnected)markTheme(n)});if(mo)mo.observe(document.body,{childList:true,subtree:true})})});
+  mo.observe(document.body,{childList:true,subtree:true})}else if(!on&&mo){mo.disconnect();mo=null}}
+var MOON='<svg class="ap-moon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 14.5A9 9 0 0 1 9.5 3a.6.6 0 0 0-.8-.7A10 10 0 1 0 21.7 15.3a.6.6 0 0 0-.7-.8Z"/></svg>';
+var SUN='<svg class="ap-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg>';
+function themeLabel(){$$(".ap-theme-btn").forEach(function(b){var d=isDark();b.setAttribute("aria-pressed",d?"true":"false");
+  b.title=d?"Switch to light mode":"Switch to dark mode";b.setAttribute("aria-label",b.title)})}
+function logos(dark){$$("img.custom-logo").forEach(function(i){var s="/assets/afri-powered-logo"+(dark?"-dark":"")+".png";if(i.getAttribute("src")!==s)i.setAttribute("src",s)})}
+function setTheme(dark,save){if(dark){markTheme();root.setAttribute("data-theme","dark")}else root.removeAttribute("data-theme");logos(dark);
+  watch(dark);themeLabel();if(save){try{localStorage.setItem(TK,dark?"dark":"light")}catch(e){}}}
+$$(".ap-searchbar").forEach(function(s){var b=document.createElement("button");b.type="button";b.className="ap-theme-btn";b.innerHTML=MOON+SUN;
+  b.addEventListener("click",function(){setTheme(!isDark(),true)});s.appendChild(b)});
+setTheme(isDark(),false);
 var toastEl;
 function added(name,q){if(!toastEl){toastEl=document.createElement("div");toastEl.className="ap-added";toastEl.setAttribute("role","status");document.body.appendChild(toastEl)}
   toastEl.innerHTML='<span class="ap-added-txt"></span><a href="/cart" class="ap-btn">View cart</a>';$(".ap-added-txt",toastEl).textContent="Added to cart: "+(q>1?q+" × ":"")+name;
