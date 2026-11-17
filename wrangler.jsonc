@@ -1,5 +1,15 @@
 {
   "name": "afri-powered-supplues",
+  "main": "src/worker.js",
   "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./public", "not_found_handling": "404-page" }
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    // the worker runs first so it can add admin edits to pages and keep /admin and /api private
+    "run_worker_first": true
+  },
+  "observability": { "enabled": true },
+  // Admin storage: KV namespace "afri-powered-store"
+  "kv_namespaces": [{ "binding": "STORE", "id": "e2038a0bb72c492a9c75b4ae28fdaba5" }]
 }

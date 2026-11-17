@@ -5,7 +5,8 @@ var $=function(i){return document.getElementById(i)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
 var money=function(n){return "R"+String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")};
 var qs=new URLSearchParams(location.search),all=[];
-fetch("/data/products.json").then(function(r){return r.json()}).then(function(d){all=d;init()});
+var catsReq=fetch("/data/categories.json").then(function(r){return r.ok?r.json():[]}).then(function(cs){(cs||[]).forEach(function(c){CATS[c.slug]=c.name})}).catch(function(){});
+Promise.all([fetch("/data/products.json").then(function(r){return r.json()}),catsReq]).then(function(d){all=d[0];init()});
 function opts(sel,vals,label){vals.forEach(function(v){var o=document.createElement("option");o.value=v[0];o.textContent=v[1];sel.appendChild(o)})}
 function init(){
   var cats=[...new Set(all.map(function(p){return p.cat}))];
@@ -22,6 +23,6 @@ function render(){
   var l=all.filter(function(p){return(!q||(p.name+" "+(p.brand||"")+" "+p.category).toLowerCase().indexOf(q)>-1)&&(!c||p.cat===c)&&(!b||p.brand===b)&&(!k||String(p.kw)===k)&&(!m||p.price<=m)});
   if(s==="lo")l.sort(function(a,b){return a.price-b.price});if(s==="hi")l.sort(function(a,b){return b.price-a.price});
   $("ap-count").textContent=l.length?"Showing "+l.length+" product"+(l.length>1?"s":""):"No products match your search. Try fewer filters, or WhatsApp us and we will help.";
-  $("ap-list").innerHTML=l.map(function(p){return '<li class="product"><a href="/product/'+esc(p.slug)+'" class="woocommerce-LoopProduct-link"><img src="'+esc(p.image)+'" alt="'+esc(p.name)+'" loading="lazy" width="300" height="300"><span class="ast-woo-product-category">'+esc(p.category)+'</span><h2 class="woocommerce-loop-product__title">'+esc(p.name)+'</h2><span class="price">'+(p.was?'<del class="ap-was">'+money(p.was)+'</del>':'')+'<span class="woocommerce-Price-amount amount">'+money(p.price)+'</span></span></a><a class="ap-btn ap-wa-btn" target="_blank" rel="noopener" href="https://wa.me/27718111466?text='+encodeURIComponent("Hi Afri-Powered, I would like to order: "+p.name+" ("+money(p.price)+")")+'">Order on WhatsApp</a></li>'}).join("");
+  $("ap-list").innerHTML=l.map(function(p){return '<li class="product"><a href="/product/'+esc(p.slug)+'" class="woocommerce-LoopProduct-link"><img src="'+esc(p.image)+'" alt="'+esc(p.name)+'" loading="lazy" width="300" height="300"><span class="ast-woo-product-category">'+esc(p.category)+'</span>'+(p.stock==="out"?'<span class="ap-out-tag">Out of stock</span>':'')+'<h2 class="woocommerce-loop-product__title">'+esc(p.name)+'</h2><span class="price">'+(p.was?'<del class="ap-was">'+money(p.was)+'</del>':'')+'<span class="woocommerce-Price-amount amount">'+money(p.price)+'</span></span></a><a class="ap-btn ap-wa-btn" target="_blank" rel="noopener" href="https://wa.me/27718111466?text='+encodeURIComponent("Hi Afri-Powered, I would like to order: "+p.name+" ("+money(p.price)+")")+'">Order on WhatsApp</a></li>'}).join("");
 }
 })();

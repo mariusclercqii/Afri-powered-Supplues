@@ -73,3 +73,13 @@
 .elementor-widget-shortcode ul.products li.product-category .woocommerce-loop-category__title{bottom:0!important;background:none;padding:4px 0 0}
 .woocommerce-js .elementor-widget-shortcode ul.products li.product.product-category a{height:auto;width:100%}
 .woocommerce-js .elementor-widget-shortcode ul.products li.product.product-category{height:auto}.woocommerce-js .elementor-widget-shortcode ul.products li.product.product-category a img{width:100%;height:auto!important;aspect-ratio:1/1}
+/* stock + delivery (data from the admin) */
+.ap-out-tag{display:inline-block;background:#c2410c;color:#fff;font:700 11px Montserrat,Arial,sans-serif;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:3px;margin:6px 0 2px}
+.ap-stock{font:600 14px Montserrat,Arial,sans-serif;margin:4px 0 12px}
+.ap-stock.ap-in{color:#15803d}.ap-stock.ap-out{color:#c2410c}
+.ap-delivery{margin:18px 0 0;padding:14px 16px;border:2px solid #0873BC;border-radius:10px;max-width:420px;font-family:Montserrat,Arial,sans-serif}
+.ap-delivery h4{margin:0 0 8px;font-size:15px}
+.ap-delivery ul{list-style:none;margin:0;padding:0}
+.ap-delivery li{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
+.ap-delivery li:last-child{border-bottom:0}
+.ap-delivery small{display:block;margin-top:8px;color:#555}

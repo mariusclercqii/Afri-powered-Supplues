@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Afri-Powered Admin</title>
+<link rel="icon" href="/assets/favicon-192x192.png">
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+<div id="login" class="login" hidden>
+  <form id="login-form" class="login-card" autocomplete="on">
+    <img src="/assets/Vector-Logo-e1710787362928.png" alt="Afri-Powered Supplies" class="login-logo">
+    <h1>Admin login</h1>
+    <label for="pw">Password</label>
+    <input id="pw" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit" class="btn primary">Log in</button>
+    <p id="login-msg" class="msg" role="alert"></p>
+  </form>
+</div>
+
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <a href="/" class="brand" target="_blank" rel="noopener"><img src="/assets/Vector-Logo-e1710787362928.png" alt=""><span>Afri-Powered Admin</span></a>
+    <nav class="tabs" id="tabs" aria-label="Admin sections">
+      <button data-tab="dashboard">Dashboard</button>
+      <button data-tab="products">Products</button>
+      <button data-tab="categories">Categories</button>
+      <button data-tab="banners">Banners</button>
+      <button data-tab="pages">Page content</button>
+      <button data-tab="delivery">Delivery</button>
+    </nav>
+    <button id="logout" class="btn ghost small">Log out</button>
+  </header>
+  <main id="view" class="view"></main>
+  <div id="savebar" class="savebar" hidden>
+    <span>You have unsaved changes.</span>
+    <button id="discard" class="btn ghost small">Undo changes</button>
+    <button id="save" class="btn primary">Save changes</button>
+  </div>
+</div>
+
+<div id="modal" class="modal" hidden><div class="modal-card" role="dialog" aria-modal="true" id="modal-card"></div></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="/admin/admin.js"></script>
+</body>
+</html>
