@@ -66,3 +66,10 @@
 .ap-arrow{width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;background:#0873BC;color:#000;font-size:18px}
 .ap-arrow:hover,.ap-arrow:focus{background:#0873BC;color:#000}
 @media(max-width:640px){.ap-arrow{width:20px;height:20px}.ap-arrow.prev{left:4px}.ap-arrow.next{right:4px}}
+/* home "Our Categories": service-card look with logo-blue edges */
+.elementor-widget-shortcode ul.products li.product-category{box-sizing:border-box;background:#fff;border:2px solid #0873BC;border-radius:12px;padding:14px 12px 10px;box-shadow:0 4px 14px rgba(8,115,188,.12);transition:transform .2s,box-shadow .2s}
+.elementor-widget-shortcode ul.products li.product-category:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(8,115,188,.25)}
+.elementor-widget-shortcode ul.products li.product-category a img{margin-bottom:8px!important}
+.elementor-widget-shortcode ul.products li.product-category .woocommerce-loop-category__title{bottom:0!important;background:none;padding:4px 0 0}
+.woocommerce-js .elementor-widget-shortcode ul.products li.product.product-category a{height:auto;width:100%}
+.woocommerce-js .elementor-widget-shortcode ul.products li.product.product-category{height:auto}.woocommerce-js .elementor-widget-shortcode ul.products li.product.product-category a img{width:100%;height:auto!important;aspect-ratio:1/1}
